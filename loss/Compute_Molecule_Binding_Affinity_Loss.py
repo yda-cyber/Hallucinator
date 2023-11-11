@@ -82,7 +82,7 @@ class MoleculeBindingAffinityLoss():
         file = './results/'+job_name+'/temp.pdb'
         file_pdbqt = './results/'+job_name+'/temp.pdbqt'
         # Need ADFR ToolKits
-        out = spc.run(["prepare_receptor", '-r', file, '-A', 'hydrogens', '-o', file_pdbqt],
+        out = spc.run(["./prepare_receptor", '-r', file, '-A', 'hydrogens', '-o', file_pdbqt],
                       capture_output=1)
         file_pdbqt = './results/'+job_name+'/temp.pdbqt'
         out_pdbqt = './results/'+job_name+'/dock.pdbqt'
@@ -106,7 +106,7 @@ class MoleculeBindingAffinityLoss():
         box = np.round(box, 2).astype('str')
 
         try:
-            out = spc.run(['qvinaw', '--receptor', file_pdbqt, '--ligand', self.ligand_pdbqt,
+            out = spc.run(['./qvina-w', '--receptor', file_pdbqt, '--ligand', self.ligand_pdbqt,
                            '--out', out_pdbqt, '--num_modes', str(
                                self.nmodes), '--cpu', str(self.ncpu),
                            '--exhaustiveness', str(self.exhaustiveness),
