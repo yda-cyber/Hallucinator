@@ -40,6 +40,8 @@ def predict_esm(model, sequence, num_recycles=3,
 
     prot_frame = pd.read_table(fake_file, sep='\s+', header=None)
     plddt = np.asarray(prot_frame.iloc[:,10])
+    if model is None:
+      plddt =  plddt*100
     pos = np.asarray(prot_frame.iloc[:,:9])
 
     if to_file or to_figure:
