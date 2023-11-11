@@ -26,14 +26,16 @@ class LossFunction():
     def get_loss(self, plddt, pos, ignore=None, job_name=None):
         
         info = []
+        sum_max_loss = 0
         if ignore is None: ignore = []
         plddt_loss, pos_loss = [], []
         for sub_loss in self.plddt_func:
             if sub_loss.__class__.__name__ in ignore: continue
+            sum_max_loss += sub_loss.max_loss
             try:
                 sub_plddt_loss, sub_info_plddt = sub_loss.calculate_loss(plddt, job_name)
             except:
-                sub_plddt_loss, sub_info_plddt = 10, {'Error':'plddt loss'}
+                sub_plddt_loss, sub_info_plddt = sub_loss.max_loss, {'Error':'plddt loss'}
             plddt_loss.append(sub_plddt_loss)
             info.append(sub_info_plddt)
         plddt_loss = self.plddt_rule(plddt_loss) if len(plddt_loss) != 0 else 0
@@ -42,11 +44,12 @@ class LossFunction():
         
         for sub_loss in self.pos_func:
             if sub_loss.__class__.__name__ in ignore: continue
+            sum_max_loss += sub_loss.max_loss
             try:
                 sub_pos_loss, sub_info_pos = sub_loss.calculate_loss(pos, plddt, 
                                                                      job_name)
             except:
-                sub_pos_loss, sub_info_pos = 10, {'Error':'pos loss'}
+                sub_pos_loss, sub_info_pos = sub_loss.max_loss, {'Error':'pos loss'}
             pos_loss.append(sub_pos_loss)
             info.append(sub_info_pos)
         pos_loss = self.pos_rule(pos_loss) if len(pos_loss) !=0 else 0        
@@ -60,7 +63,7 @@ class LossFunction():
                
         if self.info:
             self.logger.info('[LSLOG]: Following info returned: ' + str(info[0]) )
-        return loss
+        return loss/sum_max_loss
 
 
     def callback(self, plddt, pos, job_name):

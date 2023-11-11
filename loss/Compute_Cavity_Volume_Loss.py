@@ -18,6 +18,12 @@ def reform_kvformat_pos(pos, backbone=False, vdw=None):
     #pos = pos[(pos[:,2]=='CA')]
     if vdw is None:
         vdw = kv.read_vdw()
+    try:
+        vdw['HSD'] = vdw['HIS']
+        vdw['HSE'] = vdw['HIS']
+        vdw['HSN'] = vdw['HIS']
+    except:
+        pass
     new_pos = [*map(lambda p: [p[5], p[4], p[3], p[2], p[6], p[7], p[8],
                                vdw[p[3]][p[2]]], pos)]
     return np.asarray(new_pos)

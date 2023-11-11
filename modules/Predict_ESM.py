@@ -14,7 +14,7 @@ import numpy as np
 import pandas as pd
 from io import StringIO
 
-from modules.Plot_Protein import plot_protein
+from Hallucinator.modules.Plot_Protein import plot_protein
 
 
 def predict_esm(model, sequence, num_recycles=3,

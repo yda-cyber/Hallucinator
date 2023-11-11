@@ -20,40 +20,67 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from collections import defaultdict
 
-from modules.Predict_ESM import predict_esm
-from modules.Compute_RMSD import compute_rmsd
-from modules.Init_Sequence import init_sequence
-from modules.Select_Mutation import select_mutation
-from modules.Mutations_BLOSUM62 import mutation_blosum62
+from Hallucinator.modules.Predict_ESM import predict_esm
+from Hallucinator.modules.Compute_RMSD import compute_rmsd
+from Hallucinator.modules.Init_Sequence import init_sequence
+from Hallucinator.modules.Select_Mutation import select_mutation
+from Hallucinator.modules.Mutations_BLOSUM62 import mutation_blosum62
 
-from loss.Loss_Function import LossFunction
-from loss.Compute_Cavity_Volume_Loss import CavityVolumeLoss
-from loss.Compute_Contact_Density_Loss import ContactDensityLoss
-from loss.Compute_Cavity_Similarity_Loss import CavitySimilarityLoss
-from loss.Compute_Cavity_Containing_Loss import CavityContainingLoss
-from loss.Compute_Truncated_Average_PLDDT_Loss import TruncatedAveragePLDDTLoss
-from loss.Compute_Molecule_Binding_Affinity_Loss import MoleculeBindingAffinityLoss
+from Hallucinator.loss.Loss_Function import LossFunction
+
+from Hallucinator.loss.Compute_Cavity_Volume_Loss import CavityVolumeLoss
+from Hallucinator.loss.Compute_Local_Distance_Loss import LocalDistanceLoss
+from Hallucinator.loss.Compute_Secondary_Ratio_Loss import SecondaryRatioLoss
+from Hallucinator.loss.Compute_Contact_Density_Loss import ContactDensityLoss
+from Hallucinator.loss.Compute_Cavity_Similarity_Loss import CavitySimilarityLoss
+from Hallucinator.loss.Compute_Cavity_Containing_Loss import CavityContainingLoss
+from Hallucinator.loss.Compute_Protein_Containing_Loss import ProteinContainingLoss
+from Hallucinator.loss.Compute_Preserve_Structure_Loss import PreserveStructureLoss
+from Hallucinator.loss.Compute_Truncated_Average_PLDDT_Loss import TruncatedAveragePLDDTLoss
+from Hallucinator.loss.Compute_Molecule_Binding_Affinity_Loss import MoleculeBindingAffinityLoss
+from Hallucinator.loss.Compute_Cavity_Containing_Flexible_Loss import CavityContainingFlexibleLoss
+
 
 
 # Code Adapted: https://stackoverflow.com/questions/11232230/logging-to-two-files-with-different-settings
 
 
+# This a logger that will print both to screen and a file
 def setup_logger(name, log_file, level=logging.INFO):
 
     logger = logging.getLogger(name)
     logger.setLevel(level)
     logger.addHandler(logging.FileHandler(log_file))
-    logger.addHandler(logging.StreamHandler(sys.stdout))
+    #logger.addHandler(logging.StreamHandler(sys.stdout))
     return logger
 
 
 class Protein_History_MCMC_Logger():
 
+    # Length: Total length of protein hallucination
+    # Excluded_aas: a list of symbol. Special amino acid will be not added
+    # Temp: a list [Max_temp, Min_temp, (Temp_parameter)]. Parameter is for the Adaptive Control
+    # Step: maximum number of MCMC steps
+    # Temp_Control: Adaptive or Linear
+    # Free_Guess: If free_guess not zero, then init (Free_Guess) difference sequence and start with the best
+    # Seqc_Provided: None or a list. [Parent Sequence, Target RMSD (could be None), Mutation ratio (<1)]
+    # Preserve_resid: None or an array of residue ID that will not be mutated
+    # Guess_Loss_Ignore: None or a list of loss_names that will not be used in free guess.
+    # Parent_Structure_File: None or a pdb that contains parent structure. 
+    # PLDDT_Loss: a list of difference losses related to Plddt
+    # Pos_Loss: a list of difference losses related to structure
+    # form_loss: a function of Total_Losss = f(Plddt_loss, Pos_loss). For example, lambda x,y:x+y or lambda x,y:x*y
+    # Loss_info: Boolean. Whether or not print loss information each turn to the logger
+    # Pos_Rule: a function that combines all pos_loss. For example, np.sum() or np.max() 
+    # PLDDDT_Rule: a function that combine all plddt_loss.
+    # Job_name: None or a string. Name should not contains '/' or '..' to avoid being understood as folder
+
     def __init__(self, length, excluded_aas, temp, step, temp_control='Adatpive',
-                 free_guess=None, seqc_provided=None, guess_loss_ignore=None,
+                 free_guess=None, seqc_provided=None, preserve_resid=None,
+                 guess_loss_ignore=None, parent_structure_file=None,
                  plddt_loss=[], pos_loss=[], form_loss=[], loss_info=True,
                  pos_rule=np.sum, plddt_rule=np.sum, job_name=None,
-                 parent_structure_file=None):
+                 ):
 
         self.excluded_aas = excluded_aas
 
@@ -61,12 +88,14 @@ class Protein_History_MCMC_Logger():
             self.job_name = str(uuid.uuid4())[:8]
         else:
             self.job_name = str(job_name)
+        # If no job name given, assign a random name.
 
         os.makedirs('results/'+self.job_name)
 
         self.logger = setup_logger('Logger',
                                    './results/'+self.job_name+'/mcmc.log')
         self.logger.info('[JOBID]: Start with job name %s.' % self.job_name)
+        # Init Logger (printing)
 
         model = torch.load("esmfold.model")
         model.eval().cuda()
@@ -74,10 +103,13 @@ class Protein_History_MCMC_Logger():
         self.model = model
         self.logger.info('[ESMMD]: Finish init ESM Model.')
         # Init Model, ESM
+
         self.random = self.set_random_seed()
+        self.preserve_resid = preserve_resid
         self.loss = LossFunction(plddt_loss, pos_loss, form_loss, loss_info,
                                  pos_rule, plddt_rule, logger=self.logger)
         # Init Loss
+
         seqc = self.prepare_sequence(length, excluded_aas, free_guess,
                                      seqc_provided, guess_loss_ignore,
                                      parent_structure_file)
@@ -85,13 +117,15 @@ class Protein_History_MCMC_Logger():
         plddt, pos = self.predict_seq(seqc)
         loss = self.calculate_loss(plddt, pos)
         self.record_info_init(seqc, loss, temp, plddt, pos, step, temp_control)
+        # Record all initial information
 
+    # %% init a sequence from None, or readin known sequence
     def prepare_sequence(self, length, excluded_aas, free_guess, seqc_provided,
                          guess_loss_ignore, parent_structure_file=None):
 
         if seqc_provided is None:
             self.logger.info('[SECIT]: Initial Sequence Random Generated.')
-            if free_guess is None:
+            if free_guess is None or free_guess == 0:
                 seqc = init_sequence(length, excluded_aas, random=self.random)
             else:
                 seqc = self.free_guess(free_guess, guess_loss_ignore, length,
@@ -101,9 +135,9 @@ class Protein_History_MCMC_Logger():
             self.hist_rmsd = None
             self.traj_rmsd = None
         else:
-            seqc, reverse_rate = seqc_provided[0], seqc_provided[1]
+            seqc, reverse_rmsd, mutate_rate = seqc_provided[0], seqc_provided[1], seqc_provided[2]
             self.logger.info(
-                '[SECIT]: Initial Sequence Provided with random reverse rate ' + str(reverse_rate) + '%')
+                '[SECIT]: Initial Sequence Provided with random mutate rate ' + str(mutate_rate*100) + '%')
             self.logger.info('[SECIT]: ' + seqc)
             plddt, pos = self.predict_seq(seqc)
             seqc = ''.join(seqc.split('\n'))
@@ -117,18 +151,29 @@ class Protein_History_MCMC_Logger():
             else:
                 pos = pd.read_csv(parent_structure_file, sep='\s+', header=None).to_numpy()
                 self.parr_stru = pos[pos[:, 2] == 'CA']
-            nmut = int(len(self.parr_seqc)/2)
+            nmut = int(len(self.parr_seqc)*mutate_rate)
             rmsd = self.count_stru_difference()
-            while (rmsd <= reverse_rate) or (rmsd > reverse_rate + 2) :
-                if (rmsd <= reverse_rate): 
-                    nmut += 1
-                else:
-                    nmut -= 1
-                seqc = self.yield_new_seqc(nmut, fake_plddt)
+            if reverse_rmsd is not None:
+                while (rmsd <= reverse_rmsd) or (rmsd > reverse_rmsd + 2) :
+                    if (rmsd <= reverse_rmsd): 
+                        nmut += 1
+                    else:
+                        nmut -= 1
+                    seqc = self.yield_new_seqc(nmut, fake_plddt)
+                    plddt, pos = self.predict_seq(seqc)
+                    self.curr_stru = pos[pos[:, 2] == 'CA']
+                    rmsd = self.count_stru_difference()
+            elif free_guess is None or free_guess == 0:
+                seqc = seqc
                 plddt, pos = self.predict_seq(seqc)
                 self.curr_stru = pos[pos[:, 2] == 'CA']
-                rmsd = self.count_stru_difference()
-                
+                rmsd = self.count_stru_difference()   
+            else:
+                seqc = self.free_guess(free_guess, guess_loss_ignore, length,
+                                       excluded_aas) 
+                plddt, pos = self.predict_seq(seqc)
+                self.curr_stru = pos[pos[:, 2] == 'CA']
+                rmsd = self.count_stru_difference()  
             '''
             n_mut = int(reverse_rate/100 * len(seqc))
             seqc = self.yield_new_seqc(n_mut, fake_plddt)
@@ -143,6 +188,7 @@ class Protein_History_MCMC_Logger():
             self.traj_rmsd = [rmsd]
         return seqc
 
+    # %% Set a random seed that can repeat
     def set_random_seed(self, seed=None):
 
         if seed is None:
@@ -151,6 +197,7 @@ class Protein_History_MCMC_Logger():
         np.random.seed(seed)
         return np.random
 
+    # %% Record information during MCMC
     def record_info_init(self, seqc, loss, temp, plddt, pos, step, temp_control):
 
         temp_init, temp_fina, temp_setting = temp
@@ -177,6 +224,7 @@ class Protein_History_MCMC_Logger():
         # Use for adaptive Temp control
         self.r = 0
 
+    # %% Completely random guess sequences
     def free_guess(self, num, ignore, length, excluded_aas):
 
         self.hist_loss_guess = []
@@ -190,6 +238,7 @@ class Protein_History_MCMC_Logger():
             self.hist_seqc_guess.append(seqc)
         return self.hist_seqc_guess[np.argmin(self.hist_loss_guess)]
 
+    # %% Predict a sequence and return PDB(pos) and PLDDT(ca)
     def predict_seq(self, seq):
         plddt, pos = predict_esm(self.model, seq, to_file=1,
                                  file_name='results/'+self.job_name+'/temp')
@@ -197,6 +246,7 @@ class Protein_History_MCMC_Logger():
 
         return plddt[ca_index], pos
 
+    # %% Calculate loss from all loss function. Ctrl+C raise KeyInterrupt to stop
     def calculate_loss(self, plddt, pos, ignore=None):
         try:
             loss = self.loss.get_loss(plddt, pos, ignore, self.job_name)
@@ -206,9 +256,11 @@ class Protein_History_MCMC_Logger():
         # except:
         #    return 100
 
+    # %% Yield a new sequence. Mutation select from PLDDT
     def yield_new_seqc(self, size, plddt):
         mutations = select_mutation(
-            len(self.curr_seqc), size, plddt, factor=0.05, random=self.random)
+            len(self.curr_seqc), size, plddt, factor=0.05, random=self.random,
+            preserve_resid=self.preserve_resid)
         new_seqc = list(copy.copy(self.curr_seqc))
         for mutation in mutations:
             new_seqc[mutation] = mutation_blosum62(
@@ -216,6 +268,7 @@ class Protein_History_MCMC_Logger():
         new_seqc = ''.join(new_seqc)
         return new_seqc
 
+    # %% Temperature controlling part
     def temperature_control(self,):
 
         if self.temp_control == 'Linear':
@@ -226,6 +279,7 @@ class Protein_History_MCMC_Logger():
             self.curr_temp = min(
                 self.mini_temp*(1 + r1*self.r**r2), self.maxi_temp)
 
+    # %% Do a single step of MCMC
     def mcmc_single_step(self):
 
         if np.mean(self.curr_pldd) <= 50:
@@ -234,12 +288,14 @@ class Protein_History_MCMC_Logger():
             n_mut = 1
         else:
             n_mut = 2
+        # Determine how many mutations
 
         new_seqc = self.yield_new_seqc(n_mut, self.curr_pldd)
         plddt, pos = self.predict_seq(new_seqc)
         new_loss = self.calculate_loss(plddt, pos)
         self.hist_seqc.append(new_seqc)
         self.hist_loss.append(new_loss)
+        # Record new loss and seqc
 
         if new_loss < self.curr_loss:
             p = 1.0
@@ -249,6 +305,7 @@ class Protein_History_MCMC_Logger():
             acdc = self.random.choice([False, True], p=[1-p, p])
             self.r = self.r+1
         self.hist_acdc.append(acdc)
+        # Accept or Deny
 
         if acdc:
             self.curr_loss = new_loss
@@ -262,27 +319,32 @@ class Protein_History_MCMC_Logger():
             rmsd = self.count_stru_difference()
             self.hist_rmsd.append(rmsd)
             self.traj_rmsd.append(rmsd if acdc else self.traj_rmsd[-1])
+        # If have a reference structure, compare a RMSD and sequence difference
 
         acc_sign = '√' if acdc else '×'
         self.logger.info('[MCLOG]: Step: %s, New Loss: %.3f, Curr Loss: %.3f, Best Loss: %.3f, Accepted: %s with temp %.1f and prob %.3f' % (
             self.curr_step, new_loss, self.curr_loss, np.min(self.hist_loss), acc_sign, self.curr_temp/self.mini_temp, p))
+        # Logger print
 
         self.temperature_control()
+        # Change Temperature
+
         self.traj_loss.append(self.curr_loss)
 
+    # %% The overall MCMC. Print every print_level a figure. If allow_convergence, then could stop before max steps
     def mcmc(self, print_level=100, allow_convergence=False):
         try:
             while self.curr_step <= self.maxi_step:
                 self.mcmc_single_step()
                 if not self.curr_step % print_level:
-                    self.count_seqc_difference()
+                    if self.parr_seqc is not None: self.count_seqc_difference()
                     predict_esm(self.model, self.curr_seqc, to_file=1, to_figure=1,
                                 file_name='results/' + self.job_name + '/'+str(self.curr_step//print_level))
-                if self.curr_loss < 0.010 and allow_convergence:
+                if allow_convergence != None and self.curr_loss < allow_convergence:
                     self.logger.info('[ESMMD]: Logger raise convergence.')
                     raise KeyboardInterrupt
         except KeyboardInterrupt:
-            # This is auto/manual-stop
+            # This is auto/manual-stop, Ctrl+C stop the progress. Might have delay to stop every loss.
             pass
 
         self.best_seqc = self.hist_seqc[np.argmin(self.hist_loss)]
@@ -296,8 +358,11 @@ class Protein_History_MCMC_Logger():
         self.loss.callback(plddt, pos, self.job_name)
         self.calculate_loss(plddt, pos)
         self.output_history_figure()
+        # Call for a figure 
+
         print('[JODID]: Job finished with id:' + self.job_name)
 
+    # %% a function count difference in sequence space.
     def count_seqc_difference(self):
 
         diff_count = 0
@@ -308,7 +373,8 @@ class Protein_History_MCMC_Logger():
         diff_count /= 2
         self.logger.info('[DFLOG]: Difference compared to Target(Parent) Seqc %s' % (int(diff_count)))
         return int(diff_count)
-        
+    
+    # %% a function count difference in structure space
     def count_stru_difference(self):
         
         rmsd = str(np.round(compute_rmsd(self.parr_stru[:, 6:9].astype(
@@ -316,6 +382,7 @@ class Protein_History_MCMC_Logger():
         self.logger.info('[DFLOG]: Difference compared to Target(Parent) RMSD %s' % (rmsd))
         return float(rmsd)
 
+    # %% call to create a search history figure
     def output_history_figure(self):
 
         plt.rcParams['figure.dpi'] = 1200
@@ -331,33 +398,24 @@ class Protein_History_MCMC_Logger():
         plt.savefig('results/' + self.job_name + '/Search.png')
 
 
+
+# Example 1, Recover 1OW4 from 50% mutation. Init RMSD 4-6.
+'''
 if __name__ == '__main__':
 
-    vdw = {}
-    vdw['BEN'] = {'CG': 2.0, 'CD1': 2.0, 'CD2': 2.0, "CE2": 2.0, "CE1": 2.0, "CZ": 2.0,
-                  'HG': 0.0, "HD1": 0.0, 'HD2': 0.0, "HE1": 0.0, "HE2": 0.0, 'HZ': 0.0}
-    vdw['UNL'] = defaultdict(lambda: 1.5)
-
     seqc = 'NSSTQSYKDAMGPLVRECMGSVSATEDDFKTVLNRNPLESRTAQCLLACALDKVGLISPEGAIYTGDDLMPVMNRLYGFNDFKTVMKAKAVNDCANQVNGAYPDRCDLIKNFTDCVRNSY'
-    #seqc = seqc[:110]
-
+    
     logger = Protein_History_MCMC_Logger(
         length=len(seqc), excluded_aas=['C'], temp=[.5, .01, (1e-9, 5)], step=1000,
-        free_guess=10, seqc_provided=(seqc, 4.00), temp_control='Adaptive',
+        free_guess=0, seqc_provided=(seqc, 4.00, 0.5), temp_control='Adaptive', 
         guess_loss_ignore=['TruncatedAveragePLDDTLoss',
                            'MoleculeBindingAffinityLoss'],
         plddt_loss=[TruncatedAveragePLDDTLoss(20, 80)],
         pos_loss=[ContactDensityLoss(target_density=0.035, max_loss=2),
                   MoleculeBindingAffinityLoss('./molecules/1OW4_BindE.pdbqt',
                                               max_loss=5, plddt_activate_value=50,
-                                              exhaustiveness=16, target_score=10),
-        # CavityVolumeLoss(0.3, 30, 0.01, 5)],
-                 CavityContainingLoss('./molecules/1OW4_BindE.pdb', vdw,
-                                    volume_factor=0.01, volume_expansion=500,
-                                    similarity_factor=20, similarity_target_diff=0,
-                                    sample_points=10, backbone_cavity=False,
-                                    step=0.3, max_loss=5, plddt_activate_value=50)],
-        #form_loss=lambda x, y: x+y,
+                                              exhaustiveness=16, target_score=10,
+                                              )],
         form_loss=lambda x, y: x+y,
         pos_rule=np.sum, plddt_rule=np.mean,
         loss_info=True,
@@ -365,4 +423,52 @@ if __name__ == '__main__':
 
     logger.mcmc(print_level=10, allow_convergence=0)
     np.savez('./results/'+logger.job_name+'/RMSD.npz', rmsd = logger.hist_rmsd)
-    # Use Hallucination to predict/understand mutations
+'''
+
+# Example 2, Secondary Structure Ratio 
+'''
+if __name__ == '__main__':
+
+    logger = Protein_History_MCMC_Logger(
+        length=90, excluded_aas=['C'], temp=[.5, .01, (1e-9, 5)], step=10000,
+        free_guess=10, seqc_provided=None, temp_control='Adaptive',
+        guess_loss_ignore=['TruncatedAveragePLDDTLoss',
+                           'MoleculeBindingAffinityLoss'],
+        plddt_loss=[TruncatedAveragePLDDTLoss(20, 80)],
+        pos_loss=[ContactDensityLoss(target_density=0.035, max_loss=2),
+                           SecondaryRatioLoss((90, 0), (2.5,2.5), (1.5,1.5), max_loss=5),
+                           LocalDistanceLoss((3, 87), target_distance=7, max_loss=2),
+                           LocalDistanceLoss((5, 85), target_distance=7, max_loss=2)],
+        form_loss=lambda x, y: x+y,
+        pos_rule=np.sum, plddt_rule=np.mean,
+        loss_info=True)
+
+    logger.mcmc(print_level=100, allow_convergence=0)
+'''
+
+# Example 3, Evolve Protein 1OW4 and Preserve Binding Structure, 30% and RMSD 3-5.
+'''
+if __name__ == '__main__':
+
+    seqc = 'NSSTQSYKDAMGPLVRECMGSVSATEDDFKTVLNRNPLESRTAQCLLACALDKVGLISPEGAIYTGDDLMPVMNRLYGFNDFKTVMKAKAVNDCANQVNGAYPDRCDLIKNFTDCVRNSY’
+
+    preserve = np.array([7,35,77,87,113,117,120])
+
+    logger = Protein_History_MCMC_Logger(
+        length=len(seqc), excluded_aas=['C'], temp=[.5, .01, (1e-9, 5)], step=30000,
+        free_guess=30, seqc_provided=(seqc, 3.0, 0.3), temp_control=‘Adaptive‘,    
+        preserve_resid=preserve, guess_loss_ignore=['TruncatedAveragePLDDTLoss',
+                                                    'MoleculeBindingAffinityLoss'],
+        plddt_loss=[TruncatedAveragePLDDTLoss(20, 80)],
+        pos_loss=[ContactDensityLoss(target_density=0.035, max_loss=2),
+                  SecondaryRatioLoss((60,20),(2.5,2.5), max_loss=5),
+                  PreserveStructureLoss(preserve, './special/1OW4/1OW4_ESMFold.pdb',
+                                        max_loss=5, k=30)],
+        form_loss=lambda x, y: x+y,
+        pos_rule=np.sum, plddt_rule=np.mean,
+        loss_info=True,
+        parent_structure_file='./special/1OW4/1OW4_OriginalPDB.pdb')
+
+    logger.mcmc(print_level=100, allow_convergence=0)
+'''
+ 

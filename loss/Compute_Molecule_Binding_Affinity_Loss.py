@@ -21,8 +21,8 @@ import subprocess as spc
 import multiprocessing as mp
 from matplotlib import pyplot as plt
 
-from modules.Output_PDB import output_pdb
-from loss.Compute_Contact_Density_Loss import compute_euclidean_distances_matrix
+from Hallucinator.modules.Output_PDB import output_pdb
+from Hallucinator.loss.Compute_Contact_Density_Loss import compute_euclidean_distances_matrix
 
 
 def model_check_residues_plddt(models, plddt, xyz_prot, affn):
@@ -42,7 +42,7 @@ class MoleculeBindingAffinityLoss():
 
     def __init__(self, ligand_pdbqt, exhaustiveness=None, nmodes=10, ncpu=None,
                  max_loss=5, plddt_activate_value=50, use_effective_score=1,
-                 target_score=15):
+                 target_score=15, box_resid=None):
         self.ligand_pdbqt = ligand_pdbqt
         if ncpu is None or ncpu == 0:
             ncpu = mp.cpu_count()
@@ -55,6 +55,7 @@ class MoleculeBindingAffinityLoss():
         self.max_loss = max_loss
         self.use_effective_score = use_effective_score
         self.target_score = target_score
+        self.box_resid = box_resid
     
     @staticmethod
     def convert_pdbqt_xyz(pdbqt, file_name, mode=0):
@@ -88,9 +89,13 @@ class MoleculeBindingAffinityLoss():
 
         xyz = pos[:, 6:9].astype('float')
         xyz_ca = pos[pos[:, 2] == 'CA'][:, 6:9].astype('float')
-        xmin, xmax = np.min(xyz[:, 0]), np.max(xyz[:, 0])
-        ymin, ymax = np.min(xyz[:, 1]), np.max(xyz[:, 1])
-        zmin, zmax = np.min(xyz[:, 2]), np.max(xyz[:, 2])
+        xyz_main = pos[pos[:, 2] == 'CA'][:, 6:9].astype('float')
+        if self.box_resid is not None:
+            xyz_ca = xyz_ca[self.box_resid-1]
+
+        xmin, xmax = np.min(xyz_ca[:, 0]), np.max(xyz_ca[:, 0])
+        ymin, ymax = np.min(xyz_ca[:, 1]), np.max(xyz_ca[:, 1])
+        zmin, zmax = np.min(xyz_ca[:, 2]), np.max(xyz_ca[:, 2])
 
         if center is None:
             center = np.array([xmin+xmax, ymin+ymax, zmin+zmax])/2
@@ -131,12 +136,13 @@ class MoleculeBindingAffinityLoss():
                     n_atom = int(df.iloc[-1][1])
                     models = list(df.groupby(df.index // n_atom))
                     
-                    affn = model_check_residues_plddt(models, plddt, xyz_ca, affn)
+                    affn = model_check_residues_plddt(models, plddt, xyz_main, affn)
                 affn = np.min(affn)
 
             else:
-                affn = 0
+                affn = 99
         except Exception as e:
+            print(e)
             affn = 0  # Not found affn
 
         info_affn = {'Affinity': np.round(affn,2)}

@@ -14,9 +14,9 @@ import pyKVFinder as kv
 #from scipy.spatial.transform import Rotation as R
 from matplotlib import pyplot as plt
 
-from loss.Compute_Cavity_Volume_Loss import reform_kvformat_pos
-from loss.Compute_Contact_Density_Loss import compute_euclidean_distances_matrix
-from loss.Compute_Cavity_Volume_Loss import CavityVolumeLoss
+from Hallucinator.loss.Compute_Cavity_Volume_Loss import reform_kvformat_pos
+from Hallucinator.loss.Compute_Contact_Density_Loss import compute_euclidean_distances_matrix
+from Hallucinator.loss.Compute_Cavity_Volume_Loss import CavityVolumeLoss
 
 
 plt.rcParams['figure.dpi'] = 600
@@ -94,10 +94,14 @@ def point_to_line_distance_with_direction(point):
     return (dist[idx[0]], idx[0]) if d1<d2 else (dist[idx[1]], idx[1])
 
 
-def compute_distribution(surf, bins, sort_order=None, plot=False, normalized=True):
+def compute_distribution(surf, bins, sort_order=None, plot=False, 
+                         normalized=True, center=None):
 
     surf = np.copy(surf)
-    mid_point = np.mean(surf, axis=0)
+    if center is None:
+        mid_point = np.mean(surf, axis=0)
+    else:
+        mid_point = np.asarray(center)
 
     dist_to_center = compute_euclidean_distances_matrix(surf,
                                                         mid_point.reshape(1, -1))
