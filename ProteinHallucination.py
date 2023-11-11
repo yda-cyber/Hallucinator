@@ -74,7 +74,7 @@ class Protein_History_MCMC_Logger():
     # Pos_Rule: a function that combines all pos_loss. For example, np.sum() or np.max() 
     # PLDDDT_Rule: a function that combine all plddt_loss.
     # Job_name: None or a string. Name should not contains '/' or '..' to avoid being understood as folder
-    # Server_Online: True: use ESM Api, False, read local ESM
+    # server_online: True: use ESM Api, False, read local ESM
 
     def __init__(self, length, excluded_aas, temp, step, temp_control='Adatpive',
                  free_guess=None, seqc_provided=None, preserve_resid=None,
@@ -99,7 +99,7 @@ class Protein_History_MCMC_Logger():
         self.logger.info('[JOBID]: Start with job name %s.' % self.job_name)
         # Init Logger (printing)
 
-        if not self.server_online:
+        if not server_online:
             model = torch.load("esmfold.model")
             model.eval().cuda()
             model.set_chunk_size(64)
