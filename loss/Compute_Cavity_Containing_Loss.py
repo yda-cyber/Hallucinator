@@ -90,7 +90,7 @@ class CavityContainingLoss():
 
             vol_cav = convert_kvcav_xyz(cavs, idx+2, vet, self.step)
             so_distr_protein, _, _ = compute_distribution(
-                vol_cav, self.bins, None, normalized=False, relocate=self.relocate_center)
+                vol_cav, self.bins, None, normalized=False, relocate=0)
 
             diff_distr = so_distr_protein-self.so_distr
             v1 = -1*np.sum(diff_distr[diff_distr < 0])/self.npoints
