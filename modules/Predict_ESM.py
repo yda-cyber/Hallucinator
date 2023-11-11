@@ -9,7 +9,7 @@ from Hallucinator.modules.Plot_Protein import plot_protein
 
 def predict_esm(model, sequence, num_recycles=3,
                 to_file=0, file_name='Result',
-                to_figure=0, figure_dpi=600):
+                to_figure=0, figure_dpi=200):
 
     if model is not None:
       with torch.no_grad():
