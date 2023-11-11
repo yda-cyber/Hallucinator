@@ -15,6 +15,7 @@ class TruncatedAveragePLDDTLoss():
         
         self.min_val = min_val
         self.max_val = max_val
+        self.max_loss = 1
     
     def calculate_loss(self, plddt, job_name):
         
