@@ -45,12 +45,16 @@ def compute_initial_distribution(pos_guest, vdw_guest, sample_points=10, step=0.
 
 class CavityContainingLoss():
 
-    def __init__(self, pdb_guest, vdw_guest, volume_factor, volume_expansion,
+    def __init__(self, pdb_guest, volume_factor, volume_expansion,
                  similarity_factor=40, similarity_target_diff=0, 
                  sample_points=10, step=0.3, backbone_cavity=False,
                  max_loss=5, plddt_activate_value=50, use_effective_score=True):
 
         pos = pd.read_csv(pdb_guest, sep='\s+', header=None)
+        vdw_guest = {}
+        vdw_guest[pos.iloc[:,3][0]] = {}
+        for i in range(len(pos)):
+            vdw_guest[pos.iloc[:,3][0]][pos.iloc[:,2][i]] = pos.iloc[:,9][i]
         self.so_distr, self.bins, self.order, self.target_volume, self.vol_cav = compute_initial_distribution(
             pos, vdw_guest, sample_points, step)
 
