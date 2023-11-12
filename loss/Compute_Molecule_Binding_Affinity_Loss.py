@@ -175,7 +175,7 @@ class MoleculeBindingAffinityLoss():
         print('[MBLRF]: Computing Average Binding Affinity for 50 Reference PDBs')
         print('[MBLRF]: This will take several minutes.')
         
-        refdir = './molecules/Ref50PDBs/'
+        refdir = '.Hallucinator/molecules/Ref50PDBs/'
         pdbs = os.listdir(refdir)
         
         affns = []
