@@ -54,7 +54,12 @@ class MoleculeBindingAffinityLoss():
         self.plddt_activate_value = plddt_activate_value
         self.max_loss = max_loss
         self.use_effective_score = use_effective_score
-        self.target_score = target_score
+        
+        if 'Auto' in target_score:
+            N = target_score.split('-')[1]
+            self.target_score = 1.5*np.mean(self.compute_average_affinity_ref50(N))
+        else:
+            self.target_score = target_score
         self.box_resid = box_resid
     
     @staticmethod
@@ -170,7 +175,7 @@ class MoleculeBindingAffinityLoss():
         obConversion.WriteFile(mol, './results/'+job_name+'/temp.pdbqt')
         '''
 
-    def compute_average_affinity_ref50(self):
+    def compute_average_affinity_ref50(self, N=5):
         
         print('[MBLRF]: Computing Average Binding Affinity for 50 Reference PDBs')
         print('[MBLRF]: This will take several minutes.')
@@ -179,7 +184,7 @@ class MoleculeBindingAffinityLoss():
         pdbs = os.listdir(refdir)
         
         affns = []
-        for pdb in pdbs:
+        for pdb in pdbs[:N]:
             xyz = pd.read_csv(refdir+pdb, sep='\s+', skipfooter=1, 
                               header=None, engine='python').to_numpy()[:,5:8].astype('float')
             xmin, xmax = np.min(xyz[:, 0]), np.max(xyz[:, 0])
