@@ -55,7 +55,7 @@ class MoleculeBindingAffinityLoss():
         self.max_loss = max_loss
         self.use_effective_score = use_effective_score
         
-        if 'Auto' in target_score:
+        if type(target_score) is not int and 'Auto' in target_score:
             N = target_score.split('-')[1]
             self.target_score = 1.5*np.mean(self.compute_average_affinity_ref50(N))
         else:
