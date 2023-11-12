@@ -191,7 +191,7 @@ class MoleculeBindingAffinityLoss():
             center = np.round(center, 2).astype('str')
             box = np.round(box, 2).astype('str')
             
-            out = spc.run(['qvinaw', '--receptor', refdir+pdb, '--ligand', self.ligand_pdbqt,
+            out = spc.run(['./qvina-w', '--receptor', refdir+pdb, '--ligand', self.ligand_pdbqt,
                            '--num_modes', str(self.nmodes), '--cpu', str(self.ncpu),
                            '--exhaustiveness', str(self.exhaustiveness),
                            '--center_x', center[0], '--size_x', box[0],
