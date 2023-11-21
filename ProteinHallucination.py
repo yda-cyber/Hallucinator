@@ -112,7 +112,8 @@ class Protein_History_MCMC_Logger():
         self.random = self.set_random_seed()
         self.preserve_resid = preserve_resid
         self.loss = LossFunction(plddt_loss, pos_loss, form_loss, loss_info,
-                                 pos_rule, plddt_rule, logger=self.logger)
+                                 pos_rule, plddt_rule, logger=self.logger,
+                                 save_dirs=self.save_dirs)
         # Init Loss
 
         seqc = self.prepare_sequence(length, excluded_aas, free_guess,
