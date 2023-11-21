@@ -92,7 +92,7 @@ class Protein_History_MCMC_Logger():
             self.job_name = str(job_name)
         # If no job name given, assign a random name.
 
-        os.makedirs(self.save_dirs + 'results/'+self.job_name)
+        os.makedirs(self.save_dirs + 'results/'+self.job_name, exist_ok=True)
 
         self.logger = setup_logger('Logger',
                                    self.save_dirs + 'results/'+self.job_name+'/mcmc.log')
@@ -116,9 +116,23 @@ class Protein_History_MCMC_Logger():
                                  save_dirs=self.save_dirs)
         # Init Loss
 
-        seqc = self.prepare_sequence(length, excluded_aas, free_guess,
-                                     seqc_provided, guess_loss_ignore,
-                                     parent_structure_file)
+        table = self.save_dirs+'sequence.table'
+        if os.path.isfile(table):
+            try:
+                # Read the file into a DataFrame
+                df = pd.read_csv(table, sep='\t', header=None, names=['sequence', 'loss'])
+                # Find the row with the smallest loss
+                min_loss_row = df.loc[df['loss'].idxmin()]
+                print("[RESRT]: Restart from Sequence with smallest loss:", min_loss_row['sequence'], "Loss:", min_loss_row['loss'])
+                seqc = min_loss_row['sequence']
+            except:
+                seqc = self.prepare_sequence(length, excluded_aas, free_guess,
+                                         seqc_provided, guess_loss_ignore,
+                                         parent_structure_file)
+        else:
+            seqc = self.prepare_sequence(length, excluded_aas, free_guess,
+                                         seqc_provided, guess_loss_ignore,
+                                         parent_structure_file)
 
         plddt, pos = self.predict_seq(seqc)
         loss = self.calculate_loss(plddt, pos)
@@ -344,6 +358,10 @@ class Protein_History_MCMC_Logger():
         # Change Temperature
 
         self.traj_loss.append(self.curr_loss)
+
+        with open(self.save_dirs+"sequence.table", 'a') as file:
+            # Write seqc and loss to the file on a new line
+            file.write(f"{seqc}\t{loss}\n")
 
     # %% The overall MCMC. Print every print_level a figure. If allow_convergence, then could stop before max steps
     def mcmc(self, print_level=100, allow_convergence=False):
