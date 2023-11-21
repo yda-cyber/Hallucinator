@@ -116,7 +116,7 @@ class Protein_History_MCMC_Logger():
                                  save_dirs=self.save_dirs)
         # Init Loss
 
-        table = self.save_dirs+'result/' + self.job_name +'/sequence.table'
+        table = self.save_dirs+'results/' + self.job_name +'/sequence.table'
         if os.path.isfile(table):
             try:
                 # Read the file into a DataFrame
@@ -359,7 +359,7 @@ class Protein_History_MCMC_Logger():
 
         self.traj_loss.append(self.curr_loss)
 
-        with open(self.save_dirs+'result/' + self.job_name +'/sequence.table', 'a') as file:
+        with open(self.save_dirs+'results/' + self.job_name +'/sequence.table', 'a') as file:
             # Write seqc and loss to the file on a new line
             file.write(f"{new_seqc}\t{new_loss}\n")
 
