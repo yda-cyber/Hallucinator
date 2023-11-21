@@ -125,6 +125,10 @@ class Protein_History_MCMC_Logger():
                 min_loss_row = df.loc[df['loss'].idxmin()]
                 print("[RESRT]: Restart from Sequence with smallest loss:", min_loss_row['sequence'], "Loss:", min_loss_row['loss'])
                 seqc = min_loss_row['sequence']
+                self.parr_seqc = None
+                self.parr_stru = None
+                self.hist_rmsd = None
+                self.traj_rmsd = None
             except:
                 seqc = self.prepare_sequence(length, excluded_aas, free_guess,
                                          seqc_provided, guess_loss_ignore,
