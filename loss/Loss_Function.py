@@ -13,7 +13,7 @@ class LossFunction():
 
     def __init__(self, plddt_func=[], pos_func=[],form = lambda x,y: x+y, 
                  info_print=False, pos_func_rule=np.max, plddt_func_rule=np.max,
-                 logger=None):
+                 logger=None, save_dirs='./'):
         
         self.plddt_func = plddt_func
         self.pos_func = pos_func
@@ -22,6 +22,7 @@ class LossFunction():
         self.pos_rule = pos_func_rule
         self.plddt_rule = plddt_func_rule
         self.logger = logger 
+        self.save_dirs = save_dirs
     
     def get_loss(self, plddt, pos, ignore=None, job_name=None):
         
@@ -33,7 +34,7 @@ class LossFunction():
             if sub_loss.__class__.__name__ in ignore: continue
             sum_max_loss += sub_loss.max_loss
             try:
-                sub_plddt_loss, sub_info_plddt = sub_loss.calculate_loss(plddt, job_name)
+                sub_plddt_loss, sub_info_plddt = sub_loss.calculate_loss(plddt, job_name, self.save_dirs)
             except:
                 sub_plddt_loss, sub_info_plddt = sub_loss.max_loss, {'Error':'plddt loss'}
             plddt_loss.append(sub_plddt_loss)
@@ -46,8 +47,7 @@ class LossFunction():
             if sub_loss.__class__.__name__ in ignore: continue
             sum_max_loss += sub_loss.max_loss
             try:
-                sub_pos_loss, sub_info_pos = sub_loss.calculate_loss(pos, plddt, 
-                                                                     job_name)
+                sub_pos_loss, sub_info_pos = sub_loss.calculate_loss(pos, plddt, job_name, self.save_dirs)
             except:
                 sub_pos_loss, sub_info_pos = sub_loss.max_loss, {'Error':'pos loss'}
             pos_loss.append(sub_pos_loss)
@@ -69,7 +69,7 @@ class LossFunction():
     def callback(self, plddt, pos, job_name):
         
         for sub_loss in self.plddt_func:
-            sub_loss.callback(plddt, job_name)
+            sub_loss.callback(plddt, job_name, self.save_dirs)
         for sub_loss in self.pos_func:
-            sub_loss.callback(pos, job_name)
+            sub_loss.callback(pos, job_name, self.save_dirs)
     
