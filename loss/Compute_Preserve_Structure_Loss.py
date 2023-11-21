@@ -35,7 +35,7 @@ class PreserveStructureLoss():
         self.max_loss = max_loss
         self.plddt_activate_value = plddt_activate_value
 
-    def calculate_loss(self, pos, plddt, job_name, print_detail=False):
+    def calculate_loss(self, pos, plddt, job_name, dirs, print_detail=False):
 
         if np.mean(plddt) < self.plddt_activate_value:
             return self.max_loss, {}
@@ -52,6 +52,6 @@ class PreserveStructureLoss():
         loss = np.sum(loss)
         return loss, {'Preserve': np.round(loss/self.max_loss, 2)}
 
-    def callback(self, pos, job_name):
+    def callback(self, pos, job_name, dirs):
 
         pass
