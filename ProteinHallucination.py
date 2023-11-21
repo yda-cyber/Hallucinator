@@ -81,21 +81,21 @@ class Protein_History_MCMC_Logger():
                  guess_loss_ignore=None, parent_structure_file=None,
                  plddt_loss=[], pos_loss=[], form_loss=[], loss_info=True,
                  pos_rule=np.sum, plddt_rule=np.sum, job_name=None,
-                 server_online = True,
+                 server_online = True, save_dirs = './',
                  ):
 
         self.excluded_aas = excluded_aas
-
+        self.save_dirs = save_dirs
         if job_name is None:
             self.job_name = str(uuid.uuid4())[:8]
         else:
             self.job_name = str(job_name)
         # If no job name given, assign a random name.
 
-        os.makedirs('results/'+self.job_name)
+        os.makedirs(self.save_dirs + 'results/'+self.job_name)
 
         self.logger = setup_logger('Logger',
-                                   './results/'+self.job_name+'/mcmc.log')
+                                   self.save_dirs + 'results/'+self.job_name+'/mcmc.log')
         self.logger.info('[JOBID]: Start with job name %s.' % self.job_name)
         # Init Logger (printing)
 
@@ -246,7 +246,7 @@ class Protein_History_MCMC_Logger():
     # %% Predict a sequence and return PDB(pos) and PLDDT(ca)
     def predict_seq(self, seq):
         plddt, pos = predict_esm(self.model, seq, to_file=1,
-                                 file_name='results/'+self.job_name+'/temp')
+                                 file_name=self.save_dirs + 'results/'+self.job_name+'/temp')
         ca_index = pos[:, 2] == 'CA'
 
         return plddt[ca_index], pos
@@ -350,7 +350,7 @@ class Protein_History_MCMC_Logger():
                 if not self.curr_step % print_level:
                     if self.parr_seqc is not None: self.count_seqc_difference()
                     predict_esm(self.model, self.curr_seqc, to_file=1, to_figure=1,
-                                file_name='results/' + self.job_name + '/'+str(self.curr_step//print_level))
+                                file_name=self.save_dirs + 'results/' + self.job_name + '/'+str(self.curr_step//print_level))
                 if allow_convergence != None and self.curr_loss < allow_convergence:
                     self.logger.info('[ESMMD]: Logger raise convergence.')
                     raise KeyboardInterrupt
@@ -364,7 +364,7 @@ class Protein_History_MCMC_Logger():
         self.logger.info('> Final Sequence:')
         self.logger.info(self.best_seqc)
         plddt, pos = predict_esm(self.model, self.best_seqc, to_file=1, to_figure=1,
-                                 file_name='results/' + self.job_name + '/Best')
+                                 file_name=self.save_dirs + 'results/' + self.job_name + '/Best')
         plddt = plddt[pos[:, 2] == 'CA']
         self.loss.callback(plddt, pos, self.job_name)
         self.calculate_loss(plddt, pos)
@@ -406,7 +406,7 @@ class Protein_History_MCMC_Logger():
         ax.set_ylabel('Loss')
         ax.set_title('Searching Outcome')
 
-        plt.savefig('results/' + self.job_name + '/Search.png')
+        plt.savefig(self.save_dirs + 'results/' + self.job_name + '/Search.png')
 
 
 
