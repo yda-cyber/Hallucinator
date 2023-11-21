@@ -29,7 +29,7 @@ class LocalDistanceLoss():
         self.k = k
         self.dx = dx
 
-    def calculate_loss(self, pos, plddt, job_name):
+    def calculate_loss(self, pos, plddt, job_name, dirs):
 
         if np.mean(plddt) < self.plddt_activate_value:
             return self.max_loss, {}
@@ -78,6 +78,6 @@ class LocalDistanceLoss():
 
         return self.max_loss * sigm, {'Dist': (np.round(d1, 1), np.round(plddt_eff, 2), (d2 <= d1) == self.Cb_close)}
 
-    def callback(self, pos, job_name):
+    def callback(self, pos, job_name, dirs):
 
         pass
