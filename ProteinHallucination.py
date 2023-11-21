@@ -301,7 +301,7 @@ class Protein_History_MCMC_Logger():
             plddt, pos = self.predict_seq(new_seqc)
             new_loss = self.calculate_loss(plddt, pos)
         except KeyboardInterrupt:
-            raise KeyboardInterrupt:
+            raise KeyboardInterrupt
         except:
             # Unpredicted Structure. 
             plddt = np.zeros_like(self.curr_pldd)
