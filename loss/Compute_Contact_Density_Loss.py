@@ -66,7 +66,7 @@ class ContactDensityLoss():
         self.max_loss = max_loss
         self.plddt_activate_value = plddt_activate_value
     
-    def calculate_loss(self, pos, plddt, job_name):
+    def calculate_loss(self, pos, plddt, job_name, dirs):
     
         if np.mean(plddt) < self.plddt_activate_value:
             return self.max_loss, {}
@@ -77,6 +77,6 @@ class ContactDensityLoss():
         
         return loss, {'Contact %': np.round(100*density,2)}
     
-    def callback(self, pos, job_name):
+    def callback(self, pos, job_name, dirs):
         
         pass
