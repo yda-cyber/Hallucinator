@@ -58,7 +58,7 @@ class CavityVolumeLoss():
         self.max_loss = max_loss
         self.plddt_activate_value = plddt_activate_value
 
-    def calculate_loss(self, pos, plddt, job_name=None, vol=None):
+    def calculate_loss(self, pos, plddt, dirs, job_name=None, vol=None):
         
         if np.mean(plddt) < self.plddt_activate_value:
             return self.max_loss, {}
@@ -78,7 +78,7 @@ class CavityVolumeLoss():
                                {'Diff volume': np.round(dvol, 2)})
     
     
-    def callback(self, pos, job_name):
+    def callback(self, pos, job_name, dirs):
         
-        vol = compute_cavity_volume(pos, self.cavity_step, 
-                                    './results/'+job_name+'/cavity_volume.pdb')
+        vol = compute_cavity_volume(pos, self.cavity_step,
+                                    dirs+'results/'+job_name+'/cavity_volume.pdb')
