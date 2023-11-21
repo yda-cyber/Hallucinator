@@ -123,7 +123,7 @@ class Protein_History_MCMC_Logger():
                 df = pd.read_csv(table, sep='\t', header=None, names=['sequence', 'loss'])
                 # Find the row with the smallest loss
                 min_loss_row = df.loc[df['loss'].idxmin()]
-                self.logger.info("[RESRT]: Restart from Sequence with smallest loss:", min_loss_row['sequence'])
+                self.logger.info("[RESRT]: Restart from Sequence with smallest loss:" + min_loss_row['sequence'])
                 seqc = min_loss_row['sequence']
                 self.parr_seqc = None
                 self.parr_stru = None
@@ -340,7 +340,7 @@ class Protein_History_MCMC_Logger():
         # Accept or Deny
 
         if acdc:
-            self.logger.info("[USEQC]: new Sequence accpted:", new_seqc)
+            self.logger.info("[USEQC]: new Sequence accpted:"+ new_seqc)
             self.curr_loss = new_loss
             self.curr_seqc = new_seqc
             self.curr_pldd = plddt
