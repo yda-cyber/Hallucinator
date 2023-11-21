@@ -196,7 +196,7 @@ class CavitySimilarityLoss():
         self.plddt_activate_value = plddt_activate_value
         self.max_loss = max_loss
 
-    def calculate_loss(self, pos, plddt, job_name, output_filename=None):
+    def calculate_loss(self, pos, plddt, job_name, dirs, output_filename=None):
         
         if np.mean(plddt) < self.plddt_activate_value:
             return self.max_loss, {}
@@ -241,7 +241,7 @@ class CavitySimilarityLoss():
         
         return self.max_loss*(loss_sim+loss_vol-loss_sim*loss_vol), info_vol
     
-    def callback(self, pos, job_name):
+    def callback(self, pos, job_name, dirs):
         
-        self.calculate_loss(pos, 100, job_name,
-                            './results/'+job_name+'/cavity_similar.pdb')
+        self.calculate_loss(pos, 100, job_name, dirs,
+                            dirs+'results/'+job_name+'/cavity_similar.pdb')
