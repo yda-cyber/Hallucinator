@@ -78,19 +78,19 @@ class MoleculeBindingAffinityLoss():
         output_pdb(xyz_mol, name, file_name)
         
 
-    def calculate_loss(self, pos, plddt, job_name, capture_output=True, 
+    def calculate_loss(self, pos, plddt, job_name, dirs, capture_output=True, 
                        center=None, box=None):
 
         if np.mean(plddt) < self.plddt_activate_value:
             return self.max_loss, {}
 
-        file = './results/'+job_name+'/temp.pdb'
-        file_pdbqt = './results/'+job_name+'/temp.pdbqt'
+        file = dirs+'results/'+job_name+'/temp.pdb'
+        file_pdbqt = dirs+'results/'+job_name+'/temp.pdbqt'
         # Need ADFR ToolKits
         out = spc.run(["./prepare_receptor", '-r', file, '-A', 'hydrogens', '-o', file_pdbqt],
                       capture_output=1)
-        file_pdbqt = './results/'+job_name+'/temp.pdbqt'
-        out_pdbqt = './results/'+job_name+'/dock.pdbqt'
+        file_pdbqt = dirs+'results/'+job_name+'/temp.pdbqt'
+        out_pdbqt = dirs+'results/'+job_name+'/dock.pdbqt'
 
         xyz = pos[:, 6:9].astype('float')
         xyz_ca = pos[pos[:, 2] == 'CA'][:, 6:9].astype('float')
@@ -154,9 +154,9 @@ class MoleculeBindingAffinityLoss():
         loss_affn = self.max_loss * min(1, max(0, (affn+self.target_score)/(0+self.target_score)))
         return loss_affn, info_affn
 
-    def callback(self, pos, job_name):
-        shutil.copyfile('./results/'+job_name+'/Best.pdb',
-                        './results/'+job_name+'/temp.pdb')
+    def callback(self, pos, job_name, dirs):
+        shutil.copyfile(dirs+'results/'+job_name+'/Best.pdb',
+                        dirs+'results/'+job_name+'/temp.pdb')
         pass
 
         # What is the normal range of affinity (-20~0)
