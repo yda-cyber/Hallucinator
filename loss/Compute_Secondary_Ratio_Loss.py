@@ -32,7 +32,7 @@ class SecondaryRatioLoss():
         self.max_loss = max_loss
 
 
-    def calculate_loss(self, pos, plddt, job_name):
+    def calculate_loss(self, pos, plddt, job_name, dirs):
 
         if np.mean(plddt) < self.plddt_activate_value:
             return self.max_loss, {}
@@ -53,6 +53,6 @@ class SecondaryRatioLoss():
 
         return self.max_loss*loss, {'Helix %': np.round(helix*100, 0), 'Sheet %': np.round(sheet*100, 0)}
 
-    def callback(self, pos, job_name):
+    def callback(self, pos, job_name, dirs):
 
         pass
