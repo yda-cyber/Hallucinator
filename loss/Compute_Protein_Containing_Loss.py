@@ -48,7 +48,7 @@ class ProteinContainingLoss():
 
     def __init__(self, pdb_host=None, shape_function=None, max_points=100, similarity_factor=10, similarity_target_diff=0, 
                  sample_points=20, step=0.5, backbone_cavity=True, max_loss=5,
-                 plddt_activate_value=50, dirs):
+                 plddt_activate_value=50):
 
         if pdb_host is not None:
             pos = pd.read_csv(pdb_host, sep='\s+', header=None)
