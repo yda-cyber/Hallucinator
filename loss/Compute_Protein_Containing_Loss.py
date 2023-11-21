@@ -48,7 +48,7 @@ class ProteinContainingLoss():
 
     def __init__(self, pdb_host=None, shape_function=None, max_points=100, similarity_factor=10, similarity_target_diff=0, 
                  sample_points=20, step=0.5, backbone_cavity=True, max_loss=5,
-                 plddt_activate_value=50):
+                 plddt_activate_value=50, dirs):
 
         if pdb_host is not None:
             pos = pd.read_csv(pdb_host, sep='\s+', header=None)
@@ -75,7 +75,7 @@ class ProteinContainingLoss():
         self.plddt_activate_value = plddt_activate_value
 
 
-    def calculate_loss(self, pos, plddt, job_name):
+    def calculate_loss(self, pos, plddt, job_name, dirs):
         
         if np.mean(plddt) < self.plddt_activate_value:
             return self.max_loss, {}
@@ -106,6 +106,6 @@ class ProteinContainingLoss():
         
         return loss_ctn, info_ctn
     
-    def callback(self, pos, job_name):
+    def callback(self, pos, job_name, dirs):
         
         pass
