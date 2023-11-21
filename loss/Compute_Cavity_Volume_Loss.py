@@ -29,7 +29,7 @@ def reform_kvformat_pos(pos, backbone=False, vdw=None):
     return np.asarray(new_pos)
 
 
-def compute_cavity_volume(pos, step, output_filename):
+def compute_cavity_volume(pos, step, output_filename=None):
 
     pos = reform_kvformat_pos(pos)
     vet = kv.get_vertices(pos, step=step)
@@ -64,7 +64,7 @@ class CavityVolumeLoss():
             return self.max_loss, {}
         
         if vol is None:
-            vol = compute_cavity_volume(pos, self.cavity_step)
+            vol = compute_cavity_volume(pos, self.cavity_step, None)
         vol = vol.astype('float')-float(self.target_volume)
 
         dvol = np.min(abs(vol))
