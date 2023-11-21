@@ -296,8 +296,14 @@ class Protein_History_MCMC_Logger():
         # Determine how many mutations
 
         new_seqc = self.yield_new_seqc(n_mut, self.curr_pldd)
-        plddt, pos = self.predict_seq(new_seqc)
-        new_loss = self.calculate_loss(plddt, pos)
+        try:
+            plddt, pos = self.predict_seq(new_seqc)
+            new_loss = self.calculate_loss(plddt, pos)
+        except:
+            # Unpredicted Structure. 
+            plddt = np.zeros_like(self.curr_pldd)
+            pos = np.copy(self.curr_stru)
+            new_loss = 1.0
         self.hist_seqc.append(new_seqc)
         self.hist_loss.append(new_loss)
         # Record new loss and seqc
