@@ -361,7 +361,7 @@ class Protein_History_MCMC_Logger():
 
         with open(self.save_dirs+"sequence.table", 'a') as file:
             # Write seqc and loss to the file on a new line
-            file.write(f"{seqc}\t{loss}\n")
+            file.write(f"{new_seqc}\t{new_loss}\n")
 
     # %% The overall MCMC. Print every print_level a figure. If allow_convergence, then could stop before max steps
     def mcmc(self, print_level=100, allow_convergence=False):
