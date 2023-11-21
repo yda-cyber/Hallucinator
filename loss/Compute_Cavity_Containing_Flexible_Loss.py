@@ -154,5 +154,5 @@ class CavityContainingFlexibleLoss():
         flag = self.use_effective_score
         self.use_effective_score = 0
         self.calculate_loss(pos, np.array(
-            [100, 100]), job_name,  dirs+'results/'+job_name+'/cavity_contain.pdb')
+            [100, 100]), job_name,  dirs, dirs+'results/'+job_name+'/cavity_contain.pdb')
         self.use_effective_score = flag
