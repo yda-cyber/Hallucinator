@@ -72,7 +72,7 @@ class CavityContainingLoss():
         self.plddt_activate_value = plddt_activate_value
         self.use_effective_score = use_effective_score
         
-    def calculate_loss(self, pos, plddt, job_name, output_filename = None):
+    def calculate_loss(self, pos, plddt, job_name, dirs, output_filename = None):
         
         if np.mean(plddt) < self.plddt_activate_value:
             return self.max_loss, {}
@@ -129,10 +129,10 @@ class CavityContainingLoss():
         return loss_ctn, info_vol
     
     
-    def callback(self, pos, job_name):
+    def callback(self, pos, job_name, dirs):
         
         flag = self.use_effective_score
         self.use_effective_score = 0
         self.calculate_loss(pos, np.array([100,100])
-                            , job_name,  './results/'+job_name+'/cavity_contain.pdb')
+                            , job_name,  dirs, dirs+'results/'+job_name+'/cavity_contain.pdb')
         self.use_effective_score = flag
