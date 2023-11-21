@@ -17,12 +17,12 @@ class TruncatedAveragePLDDTLoss():
         self.max_val = max_val
         self.max_loss = 1
     
-    def calculate_loss(self, plddt, job_name):
+    def calculate_loss(self, plddt, job_name, dirs):
         
         m = np.mean(plddt)
         return (min(1,max(0,(1-(m-self.min_val)/(self.max_val-self.min_val)))), 
                 {'Ave Plddt': np.round(m, 2)})
     
-    def callback(self, plddt, job_name):
+    def callback(self, plddt, job_name, dirs):
         
         pass
