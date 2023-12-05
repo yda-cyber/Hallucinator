@@ -115,10 +115,10 @@ class CavityContainingLoss():
             residues = kv.constitutional(cavs, new_pos, vet, step=self.step)
             ef_resid = np.asarray(residues[list(residues)[idx]])[:,0].astype('int')
             ef_plddt = plddt[ef_resid]
-            if np.mean(ef_plddt) < self.plddt_activate_value:
+            if np.mean(ef_plddt) < self.plddt_activate_value - 10:
                 loss_ctn, info_ctn = 1, 'Unstable'
-            #elif np.any(ef_plddt < self.plddt_activate_value - 20):
-            #    loss_ctn, info_ctn = 1, 'Unstable'              
+            elif np.any(ef_plddt < self.plddt_activate_value - 30):
+                loss_ctn, info_ctn = 1, 'Unstable'              
             else:
                 info_ctn = np.round(info_ctn, 2)
             loss_ctn = min(1, loss_ctn / min(1,np.min(ef_plddt)/70)**2)
