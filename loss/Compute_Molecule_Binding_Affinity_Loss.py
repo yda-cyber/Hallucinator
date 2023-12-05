@@ -222,7 +222,7 @@ class MoleculeBindingAffinityLoss():
         affns = np.asarray(affns)
         mean = np.mean(affns[affns!=0])
         affns[affns==0] = mean
-        plt.rcParams['figure.dpi'] = 1200
+        plt.rcParams['figure.dpi'] = 200
         fig = plt.figure(figsize=(2,3))
         plt.boxplot(affns)
         plt.ylabel('Binding Affinity')
