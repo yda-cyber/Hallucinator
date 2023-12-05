@@ -63,7 +63,8 @@ class LossFunction():
                
         if self.info:
             self.logger.info('[LSLOG]: Following info returned: ' + str(info[0]) )
-        return loss/sum_max_loss
+        #return loss/sum_max_loss
+        return loss
 
 
     def callback(self, plddt, pos, job_name):
