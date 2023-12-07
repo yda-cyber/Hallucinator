@@ -422,7 +422,7 @@ class Protein_History_MCMC_Logger():
     # %% call to create a search history figure
     def output_history_figure(self):
 
-        plt.rcParams['figure.dpi'] = 1200
+        plt.rcParams['figure.dpi'] = 200
         fig = plt.figure(figsize=(6, 3))
         ax = fig.add_subplot(111)
         ax.scatter(range(len(self.hist_loss)),
