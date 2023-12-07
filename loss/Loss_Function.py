@@ -23,6 +23,7 @@ class LossFunction():
         self.plddt_rule = plddt_func_rule
         self.logger = logger 
         self.save_dirs = save_dirs
+        self.sum_max_loss = 100
     
     def get_loss(self, plddt, pos, ignore=None, job_name=None):
         
@@ -63,6 +64,8 @@ class LossFunction():
                
         if self.info:
             self.logger.info('[LSLOG]: Following info returned: ' + str(info[0]) )
+
+        self.sum_max_loss = sum_max_loss
         #return loss/sum_max_loss
         return loss
 
