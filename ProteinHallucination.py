@@ -324,7 +324,7 @@ class Protein_History_MCMC_Logger():
             # Unpredicted Structure. 
             plddt = np.zeros_like(self.curr_pldd)
             pos = np.copy(self.curr_stru)
-            new_loss = 1.0
+            new_loss = self.loss.sum_max_loss
         self.hist_seqc.append(new_seqc)
         self.hist_loss.append(new_loss)
         # Record new loss and seqc
