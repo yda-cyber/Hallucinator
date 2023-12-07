@@ -176,13 +176,14 @@ class MoleculeBindingAffinityLoss():
         '''
 
     def compute_average_affinity_ref50(self, N=5):
-        
-        print('[MBLRF]: Computing Average Binding Affinity for 50 Reference PDBs')
-        print('[MBLRF]: This will take several minutes.')
-        
+
         refdir = './Hallucinator/molecules/Ref50PDBs/'
         pdbs = os.listdir(refdir)
-        
+
+        N = len(pdbs) if N >= len(pdbs) else N
+        print('[MBLRF]: Computing Average Binding Affinity for %s Reference PDBs' % N)
+        print('[MBLRF]: This will take several minutes.')
+            
         affns = []
         for pdb in pdbs[:N]:
             xyz = pd.read_csv(refdir+pdb, sep='\s+', skipfooter=1, 
