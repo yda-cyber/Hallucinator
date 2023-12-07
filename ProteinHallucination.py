@@ -340,7 +340,7 @@ class Protein_History_MCMC_Logger():
         # Accept or Deny
 
         if acdc:
-            self.logger.info("[USEQC]: new Sequence accpted:"+ new_seqc)
+            self.logger.info("[USEQC]: new Sequence accpted: "+ new_seqc)
             self.curr_loss = new_loss
             self.curr_seqc = new_seqc
             self.curr_pldd = plddt
